@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Сделано задание на звездочку
@@ -9,7 +9,7 @@ const isStar = true;
 /**
  * Телефонная книга
  */
-let phoneBook;
+const phoneBook = new Map();
 
 /**
  * Добавление записи в телефонную книгу
@@ -18,8 +18,18 @@ let phoneBook;
  * @param {String?} email
  * @returns {Boolean}
  */
-function add(phone, name, email) {
+function add(phone, name = "", email = "") {
+    const isvalidPhone = /^\d{10}$/.test(phone);
+    if (!phoneBook.has(phone) && isvalidPhone && name.length > 0) {
+        let user = {
+            userName: name,
+            userEmail: String(email),
+        };
+        phoneBook.set(phone, user);
 
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -29,8 +39,17 @@ function add(phone, name, email) {
  * @param {String?} email
  * @returns {Boolean}
  */
-function update(phone, name, email) {
+function update(phone, name, email = "") {
+    if (phoneBook.has(phone) && name.length > 0) {
+        let user = {
+            userName: name,
+            userEmail: String(email),
+        };
+        phoneBook.set(phone, user);
 
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -39,7 +58,14 @@ function update(phone, name, email) {
  * @returns {Number}
  */
 function findAndRemove(query) {
-
+    let search = find(query);
+    for (let item of search) {
+        let key = item[1]
+            .replace(/(\d{3})\) (\d{3})-(\d{2})-(\d{2})/, "$1$2$3$4")
+            .substring(4);
+        phoneBook.delete(key);
+    }
+    return search.length;
 }
 
 /**
@@ -48,7 +74,29 @@ function findAndRemove(query) {
  * @returns {String[]}
  */
 function find(query) {
+    if (query === "") {
+        return;
+    }
 
+    let template = query;
+    if (query === "*") {
+        template = "";
+    }
+
+    let sorted = [...phoneBook.entries()]
+        .sort((a, b) => (b[1].userName > a[1].userName ? -1 : 1))
+        .map((value) => {
+            return [
+                value[1].userName,
+                value[0].replace(
+                    /(\d{3})(\d{3})(\d{2})(\d{2})/,
+                    "+7 ($1) $2-$3-$4"
+                ),
+                value[1].userEmail,
+            ].filter((item) => item !== undefined);
+        });
+
+    return sorted.filter((item) => item.join("").includes(template));
 }
 
 /**
@@ -62,7 +110,20 @@ function importFromCsv(csv) {
     // Добавляем в телефонную книгу
     // Либо обновляем, если запись с таким телефоном уже существует
 
-    return csv.split('\n').length;
+    let users = csv.split("\n").map(item => {
+        let user = item.split(";");
+
+        return [user[1], user[0], user[2]];
+    });
+
+    let counter = 0;
+    for (let user of users) {
+        if (add(...user) || update(...user)) {
+            counter++
+        }
+    }
+
+    return counter;
 }
 
 module.exports = {
@@ -72,5 +133,5 @@ module.exports = {
     find,
     importFromCsv,
 
-    isStar
+    isStar,
 };
